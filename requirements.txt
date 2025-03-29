@@ -8,6 +8,6 @@ itsdangerous==2.2.0
 jinja2==3.1.6
 markupsafe==3.0.2
 # Known vulnerabilities: Arbitrary File Read (CVE-2022-21699)
-requests==2.19.1
+requests==2.32.2
 urllib3==1.23
 werkzeug==3.1.3
