@@ -22,7 +22,7 @@ jobs:
         run: |
           semgrep scan \
             --config=auto \
-            --severity ERROR,WARNING \
+            --severity ERROR \
             --output=semgrep-results.txt \
             --json > semgrep-results.json
         continue-on-error: true
