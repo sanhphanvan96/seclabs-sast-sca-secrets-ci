@@ -29,8 +29,10 @@ jobs:
       - name: Process Results
         id: results
         run: |
-          jq -r '.runs[].results | map(.severity) | group_by(.) | map({(.[0]): length}) | add' results.sarif > severity_counts.json
+          jq -r '.runs[].results | map(.severity) | group_by(.) | map({(.[0]): length}) | add // {}' results.sarif > severity_counts.json
           echo "SEVERITIES=$(cat severity_counts.json | jq -c .)" >> $GITHUB_ENV
+          echo "## CodeQL Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          cat severity_counts.json | jq -r 'to_entries | map("**\(.key | ascii_upcase):** \(.value)") | .[]' >> $GITHUB_STEP_SUMMARY
 
       - name: Comment PR
         if: github.event_name == 'pull_request' && always()
