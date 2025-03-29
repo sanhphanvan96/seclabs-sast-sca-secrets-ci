@@ -7,6 +7,9 @@ on:
 jobs:
   grype:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -16,4 +19,72 @@ jobs:
           curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
 
       - name: Run Grype Scan
-        run: grype . --fail-on medium
+        id: scan
+        run: |
+          grype . -o json --file grype-results.json || true
+          grype . -o table --file grype-results.txt --fail-on medium
+
+      - name: Process Results
+        if: always()
+        id: results
+        run: |
+          TOTAL=$(jq '.matches | length' grype-results.json)
+          CRITICAL=$(jq '.matches[] | select(.vulnerability.severity == "Critical") | .vulnerability.id' grype-results.json | wc -l)
+          HIGH=$(jq '.matches[] | select(.vulnerability.severity == "High") | .vulnerability.id' grype-results.json | wc -l)
+          MEDIUM=$(jq '.matches[] | select(.vulnerability.severity == "Medium") | .vulnerability.id' grype-results.json | wc -l)
+          LOW=$(jq '.matches[] | select(.vulnerability.severity == "Low") | .vulnerability.id' grype-results.json | wc -l)
+
+          echo "total=${TOTAL:-0}" >> $GITHUB_OUTPUT
+          echo "critical=${CRITICAL:-0}" >> $GITHUB_OUTPUT
+          echo "high=${HIGH:-0}" >> $GITHUB_OUTPUT
+          echo "medium=${MEDIUM:-0}" >> $GITHUB_OUTPUT
+          echo "low=${LOW:-0}" >> $GITHUB_OUTPUT
+
+      - name: Add to Job Summary
+        if: always()
+        run: |
+          echo "## Grype Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Vulnerability Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Total Vulnerabilities**: ${{ steps.results.outputs.total }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Critical**: ${{ steps.results.outputs.critical }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **High**: ${{ steps.results.outputs.high }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Medium**: ${{ steps.results.outputs.medium }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Low**: ${{ steps.results.outputs.low }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Detailed Findings" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          cat grype-results.txt >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Comment PR
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const results = fs.readFileSync('grype-results.txt', 'utf8');
+            const summary = `## Grype Security Scan Results
+
+            ### Summary
+            - Total Vulnerabilities: ${{ steps.results.outputs.total }}
+            - Critical: ${{ steps.results.outputs.critical }}
+            - High: ${{ steps.results.outputs.high }}
+            - Medium: ${{ steps.results.outputs.medium }}
+            - Low: ${{ steps.results.outputs.low }}
+
+            <details>
+            <summary>Click to see detailed findings</summary>
+
+            \`\`\`
+            ${results}
+            \`\`\`
+            </details>`;
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
