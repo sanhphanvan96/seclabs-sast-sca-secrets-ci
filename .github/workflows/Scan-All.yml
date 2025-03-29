@@ -12,17 +12,17 @@ jobs:
     uses: ./.github/workflows/Secrets-GGShield.yml
     secrets: inherit
 
-  sast-semgrep:
-    uses: ./.github/workflows/SAST-Semgrep.yml
-  sast-codeql:
-    uses: ./.github/workflows/SAST-CodeQL.yml
-
   sca-depcheck:
     uses: ./.github/workflows/SCA-Dependency-Check.yml
   sca-trivy:
     uses: ./.github/workflows/SCA-Trivy.yml
   sca-grype:
     uses: ./.github/workflows/SCA-Grype.yml
+
+  sast-semgrep:
+    uses: ./.github/workflows/SAST-Semgrep.yml
+  sast-codeql:
+    uses: ./.github/workflows/SAST-CodeQL.yml
 
   container-dockle:
     uses: ./.github/workflows/Container-Dockle.yml

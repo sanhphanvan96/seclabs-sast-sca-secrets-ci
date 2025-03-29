@@ -4,13 +4,79 @@ on:
   pull_request:
   workflow_call:
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   semgrep:
     runs-on: ubuntu-latest
+    container:
+      image: returntocorp/semgrep
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Run Semgrep
-        uses: returntocorp/semgrep-action@v1
+
+      - name: Run Semgrep Scan
+        id: scan
+        run: |
+          semgrep scan \
+            --config=auto \
+            --severity ERROR,WARNING \
+            --output=semgrep-results.txt \
+            --json > semgrep-results.json
+        continue-on-error: true
+
+      - name: Process Results
+        if: always()
+        id: results
+        run: |
+          TOTAL=$(jq '.results | length' semgrep-results.json)
+          echo "total=${TOTAL:-0}" >> $GITHUB_OUTPUT
+
+          # Format findings for summary
+          echo "## Semgrep Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "${TOTAL:-0}" == "0" ]]; then
+            echo "✅ **No security issues found**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **${TOTAL} security issues detected**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "<details><summary>Click to see findings</summary>" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            cat semgrep-results.txt >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "</details>" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Comment PR
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
         with:
-          config: auto
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const results = fs.readFileSync('semgrep-results.txt', 'utf8');
+            const total = ${{ steps.results.outputs.total }};
+
+            const summary = `## Semgrep Security Scan Results
+
+            ${total === 0
+              ? '✅ No security issues found'
+              : `⚠️ ${total} security issues detected\n
+              <details>
+              <summary>Click to see findings</summary>
+
+              \`\`\`
+              ${results}
+              \`\`\`
+              </details>`}`;
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
