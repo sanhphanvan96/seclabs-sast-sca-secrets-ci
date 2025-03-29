@@ -59,9 +59,12 @@ jobs:
           echo "- **Medium**: ${{ steps.summary.outputs.medium }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Low**: ${{ steps.summary.outputs.low }}" >> $GITHUB_STEP_SUMMARY
 
-      - name: Upload Report
+      - name: Upload Reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: dependency-check-report
-          path: reports/dependency-check-report.html
+          name: dependency-check-reports
+          path: |
+            reports/dependency-check-report.html
+            reports/dependency-check-report.csv
+            reports/dependency-check-report.sarif
