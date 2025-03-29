@@ -1,4 +1,5 @@
 name: SAST - CodeQL Security Scan
+
 on:
   workflow_dispatch:
   pull_request:
@@ -12,6 +13,7 @@ permissions:
 jobs:
   codeql:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -24,18 +26,27 @@ jobs:
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
-          output: results.sarif
+          output: ./results.sarif  # Specify full path
 
       - name: Install sarif-to-markdown
-        run: npm install @security-alert/sarif-to-markdown
+        run: npm install -g @security-alert/sarif-to-markdown  # Install globally
 
       - name: Process Results
         id: results
         run: |
-          # Convert SARIF to Markdown and add to summary
-          echo "## CodeQL Security Scan Results" >> $GITHUB_STEP_SUMMARY
-          echo "## Detailed Findings" >> $GITHUB_STEP_SUMMARY
-          npx @security-alert/sarif-to-markdown results.sarif >> $GITHUB_STEP_SUMMARY
+          # Ensure output directory exists
+          mkdir -p ./output
+
+          # Initialize summary file if not exists
+          echo "## CodeQL Security Scan Results" > $GITHUB_STEP_SUMMARY
+          echo "### Detailed Findings" >> $GITHUB_STEP_SUMMARY
+
+          # Convert SARIF to Markdown and append to summary
+          if [ -f ./results.sarif ]; then
+            npx sarif-to-markdown ./results.sarif >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No results file found" >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: Comment PR
         if: github.event_name == 'pull_request' && always()
@@ -44,11 +55,30 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            const severities = JSON.parse(process.env.SEVERITIES || '{}');
-            const summary = `## CodeQL Security Scan Results\n\n` +
-              `**HIGH:** ${severities.high || 0}\n` +
-              `**MEDIUM:** ${severities.medium || 0}\n` +
-              `**LOW:** ${severities.low || 0}\n`;
+            let summary = "## CodeQL Security Scan Results\n\n";
+
+            try {
+              const sarifData = JSON.parse(fs.readFileSync('./results.sarif', 'utf8'));
+              const counts = {
+                high: 0,
+                medium: 0,
+                low: 0
+              };
+
+              sarifData.runs[0]?.results?.forEach(result => {
+                switch(result.level) {
+                  case 'error': counts.high++; break;
+                  case 'warning': counts.medium++; break;
+                  case 'note': counts.low++; break;
+                }
+              });
+
+              summary += `**HIGH:** ${counts.high}\n` +
+                        `**MEDIUM:** ${counts.medium}\n` +
+                        `**LOW:** ${counts.low}\n`;
+            } catch (e) {
+              summary += "Failed to process scan results\n";
+            }
 
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
@@ -62,4 +92,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: codeql-results
-          path: results.sarif
+          path: ./results.sarif
