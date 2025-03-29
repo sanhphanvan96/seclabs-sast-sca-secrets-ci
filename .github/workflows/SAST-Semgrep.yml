@@ -32,9 +32,9 @@ jobs:
         id: results
         run: |
           # Get vulnerability counts by type
-          TOTAL=$(jq '.results | length' reports/semgrep-results.json)
-          CRITICAL=$(jq '.results[] | select(.extra.severity == "ERROR") | .check_id' reports/semgrep-results.json | wc -l)
-          HIGH=$(jq '.results[] | select(.extra.severity == "WARNING") | .check_id' reports/semgrep-results.json | wc -l)
+          TOTAL=$(jq '.results | length' semgrep-results.json)
+          CRITICAL=$(jq '.results[] | select(.extra.severity == "ERROR") | .check_id' semgrep-results.json | wc -l)
+          HIGH=$(jq '.results[] | select(.extra.severity == "WARNING") | .check_id' semgrep-results.json | wc -l)
 
           echo "total=${TOTAL:-0}" >> $GITHUB_OUTPUT
           echo "critical=${CRITICAL:-0}" >> $GITHUB_OUTPUT
@@ -59,7 +59,7 @@ jobs:
                   "**Category:** " + .extra.metadata.category + "\n" +
                   "**CWE:** " + (.extra.metadata.cwe[0]|split(":")[0]) + "\n" +
                   "**Message:** " + .extra.message + "\n" +
-                  "```\n" + .lines + "\n```\n"' reports/semgrep-results.json >> $GITHUB_STEP_SUMMARY
+                  "```\n" + .lines + "\n```\n"' semgrep-results.json >> $GITHUB_STEP_SUMMARY
 
             echo "</details>" >> $GITHUB_STEP_SUMMARY
           fi
