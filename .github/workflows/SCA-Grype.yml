@@ -25,6 +25,11 @@ jobs:
           grype . -o table --file grype-results.txt --fail-on medium
           cat grype-results.txt
 
+      - name: Display Results
+        if: always()
+        run: |
+          cat grype-results.txt
+
       - name: Process Results
         if: always()
         id: results
