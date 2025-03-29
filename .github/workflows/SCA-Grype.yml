@@ -22,7 +22,8 @@ jobs:
         id: scan
         run: |
           grype . -o json --file grype-results.json || true
-          grype . -o table --fail-on medium
+          grype . -o table --file grype-results.txt --fail-on medium
+          cat grype-results.txt
 
       - name: Process Results
         if: always()
