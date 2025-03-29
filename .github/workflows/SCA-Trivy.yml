@@ -60,3 +60,10 @@ jobs:
             })
         env:
           REPORT: ${{ steps.vars.outputs.report }}
+
+      - name: Upload Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: trivy-results.txt
