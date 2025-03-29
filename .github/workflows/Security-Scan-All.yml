@@ -1,0 +1,29 @@
+name: Security Scan - All
+on:
+  workflow_dispatch:
+  # pull_request:
+
+jobs:
+  secrets-gitleaks:
+    uses: ./.github/workflows/Secrets-Gitleaks.yml
+  secrets-trufflehog:
+    uses: ./.github/workflows/Secrets-TruffleHog.yml
+  secrets-ggshield:
+    uses: ./.github/workflows/Secrets-GGShield.yml
+
+  sast-semgrep:
+    uses: ./.github/workflows/SAST-Semgrep.yml
+  sast-codeql:
+    uses: ./.github/workflows/SAST-CodeQL.yml
+
+  sca-depcheck:
+    uses: ./.github/workflows/SCA-Dependency-Check.yml
+  sca-trivy:
+    uses: ./.github/workflows/SCA-Trivy.yml
+  sca-grype:
+    uses: ./.github/workflows/SCA-Grype.yml
+
+  container-dockle:
+    uses: ./.github/workflows/Container-Dockle.yml
+  container-trivy:
+    uses: ./.github/workflows/Container-Trivy.yml

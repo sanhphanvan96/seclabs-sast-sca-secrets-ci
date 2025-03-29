@@ -1,0 +1,16 @@
+name: Container - Trivy Docker Scan
+on:
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  trivy-docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Run Trivy Docker Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: "python:3.9-slim"
+          scan-type: "image"

@@ -1,0 +1,15 @@
+name: SCA - OWASP Dependency Check
+on:
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  dependency-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Run OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: "Python Flask API"
