@@ -7,12 +7,46 @@ on:
 jobs:
   dependency-check:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
       - name: Run OWASP Dependency Check
         uses: dependency-check/Dependency-Check_Action@main
+        id: depcheck
         with:
           project: "Python Flask API"
           path: "./"
-          format: "ALL"
+          format: "HTML"
+          out: "reports"
+
+      - name: Read HTML Report
+        if: always()
+        id: report
+        run: |
+          REPORT="$(cat reports/dependency-check-report.html)"
+          echo "report<<EOF" >> $GITHUB_OUTPUT
+          echo "$REPORT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Add to Job Summary
+        if: always()
+        run: |
+          echo "## OWASP Dependency Check Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Full report available in workflow artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "<details><summary>Click to see detailed report</summary>" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat reports/dependency-check-report.html >> $GITHUB_STEP_SUMMARY
+          echo "</details>" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: reports/dependency-check-report.html
