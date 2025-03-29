@@ -68,3 +68,4 @@ jobs:
             reports/dependency-check-report.html
             reports/dependency-check-report.csv
             reports/dependency-check-report.sarif
+            reports/dependency-check-report.json
