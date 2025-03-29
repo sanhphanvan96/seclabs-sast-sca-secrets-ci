@@ -23,8 +23,8 @@ jobs:
           semgrep scan \
             --config=auto \
             --severity ERROR \
-            --output=semgrep-results.txt \
-            --json > semgrep-results.json
+            --output=semgrep-results.json \
+            --json | tee semgrep-results.txt
         continue-on-error: true
 
       - name: Process Results
