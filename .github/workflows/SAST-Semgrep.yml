@@ -24,22 +24,18 @@ jobs:
             --config=auto \
             --severity ERROR \
             --error \
+            --no-force-color \
+            --quiet \
             --use-git-ignore 2>&1 | tee semgrep-results.txt
         continue-on-error: true
-
-      - name: Display results
-        if: always()
-        run: |
-          echo "## Semgrep Security Scan Results"
-          cat semgrep-results.txt
 
       - name: Process Results
         if: always()
         id: results
         run: |
+          cat semgrep-results.txt
           echo "## Semgrep Security Scan Results" >> $GITHUB_STEP_SUMMARY
           cat semgrep-results.txt >> $GITHUB_STEP_SUMMARY
-          cat semgrep-results.txt >> $GITHUB_OUTPUT
 
       - name: Comment PR
         if: github.event_name == 'pull_request' && always()
@@ -51,10 +47,13 @@ jobs:
             const results = fs.readFileSync('semgrep-results.txt', 'utf8');
 
             const output = `
-            #### Semgrep Scan Results
+            <details>
+            <summary>🔍 Semgrep Scan Results (Click to see more)</summary>
+
             \`\`\`
             ${results}
             \`\`\`
+            </details>
             `;
 
             await github.rest.issues.createComment({
