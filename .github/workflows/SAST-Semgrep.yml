@@ -31,23 +31,36 @@ jobs:
         if: always()
         id: results
         run: |
-          TOTAL=$(jq '.results | length' semgrep-results.json)
+          # Get vulnerability counts by type
+          TOTAL=$(jq '.results | length' reports/semgrep-results.json)
+          CRITICAL=$(jq '.results[] | select(.extra.severity == "ERROR") | .check_id' reports/semgrep-results.json | wc -l)
+          HIGH=$(jq '.results[] | select(.extra.severity == "WARNING") | .check_id' reports/semgrep-results.json | wc -l)
+
           echo "total=${TOTAL:-0}" >> $GITHUB_OUTPUT
+          echo "critical=${CRITICAL:-0}" >> $GITHUB_OUTPUT
+          echo "high=${HIGH:-0}" >> $GITHUB_OUTPUT
 
           # Format findings for summary
           echo "## Semgrep Security Scan Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔥 Critical: ${CRITICAL:-0}" >> $GITHUB_STEP_SUMMARY
+          echo "- ⚠️ High: ${HIGH:-0}" >> $GITHUB_STEP_SUMMARY
+          echo "- 📊 Total: ${TOTAL:-0}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
 
-          if [[ "${TOTAL:-0}" == "0" ]]; then
-            echo "✅ **No security issues found**" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "⚠️ **${TOTAL} security issues detected**" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
+          if [[ "${TOTAL:-0}" != "0" ]]; then
             echo "<details><summary>Click to see findings</summary>" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-            cat semgrep-results.txt >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+            # Process each finding
+            jq -r '.results[] | "### " + .path + ":" + (.start.line|tostring) + "\n" +
+                  "**Severity:** " + .extra.severity + "\n" +
+                  "**Category:** " + .extra.metadata.category + "\n" +
+                  "**CWE:** " + (.extra.metadata.cwe[0]|split(":")[0]) + "\n" +
+                  "**Message:** " + .extra.message + "\n" +
+                  "```\n" + .lines + "\n```\n"' reports/semgrep-results.json >> $GITHUB_STEP_SUMMARY
+
             echo "</details>" >> $GITHUB_STEP_SUMMARY
           fi
 
