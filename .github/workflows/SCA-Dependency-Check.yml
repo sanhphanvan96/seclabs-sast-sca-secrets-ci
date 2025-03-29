@@ -20,8 +20,13 @@ jobs:
         with:
           project: "Python Flask API"
           path: "./"
-          format: "JSON"
+          format: "JSON,HTML"
           out: "reports"
+            # https://jeremylong.github.io/DependencyCheck/dependency-check-cli/arguments.html.
+            # - '--nvdApiKey: Uses the NVD API key stored in GitHub Secrets for accessing the National Vulnerability Database.
+            # - '--failOnCVSS 7': Fails the scan if any vulnerabilities with a CVSS score of 7 or higher are found.
+            # - '--failBuildOnCVSS 7': Fails the build if any vulnerabilities with a CVSS score of 7 or higher are found.
+          args: "--nvdApiKey=${{ secrets.NVD_API_KEY }} --failOnCVSS 7 --failBuildOnCVSS 7 --prettyPrint"
 
       - name: Extract Summary from Report
         if: always()
@@ -60,4 +65,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: dependency-check-report
-          path: reports/dependency-check-report.json
+          path: reports/dependency-check-report.html
