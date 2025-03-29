@@ -26,7 +26,7 @@ jobs:
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
-          output: ./results.sarif  # Specify full path
+          output: ./output # Specify full path
 
       - name: Install sarif-to-markdown
         run: npm install -g @security-alert/sarif-to-markdown  # Install globally
@@ -34,16 +34,14 @@ jobs:
       - name: Process Results
         id: results
         run: |
-          # Ensure output directory exists
-          mkdir -p ./output
 
           # Initialize summary file if not exists
           echo "## CodeQL Security Scan Results" > $GITHUB_STEP_SUMMARY
           echo "### Detailed Findings" >> $GITHUB_STEP_SUMMARY
 
           # Convert SARIF to Markdown and append to summary
-          if [ -f ./results.sarif ]; then
-            npx sarif-to-markdown ./results.sarif >> $GITHUB_STEP_SUMMARY
+          if [ -f ./output/python.sarif ]; then
+            npx sarif-to-markdown ./output/python.sarif >> $GITHUB_STEP_SUMMARY
           else
             echo "No results file found" >> $GITHUB_STEP_SUMMARY
           fi
@@ -58,7 +56,7 @@ jobs:
             let summary = "## CodeQL Security Scan Results\n\n";
 
             try {
-              const sarifData = JSON.parse(fs.readFileSync('./results.sarif', 'utf8'));
+              const sarifData = JSON.parse(fs.readFileSync('./output/python.sarif', 'utf8'));
               const counts = {
                 high: 0,
                 medium: 0,
@@ -92,4 +90,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: codeql-results
-          path: ./results.sarif
+          path: ./output/python.sarif
