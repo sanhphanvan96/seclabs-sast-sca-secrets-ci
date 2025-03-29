@@ -10,6 +10,7 @@ jobs:
     uses: ./.github/workflows/Secrets-TruffleHog.yml
   secrets-ggshield:
     uses: ./.github/workflows/Secrets-GGShield.yml
+    secrets: inherit
 
   sast-semgrep:
     uses: ./.github/workflows/SAST-Semgrep.yml
