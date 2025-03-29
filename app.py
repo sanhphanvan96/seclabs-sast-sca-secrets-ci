@@ -34,6 +34,7 @@ def ping():
 
 # Hardcoded API Key (Detected by secret scanning tools)
 API_KEY = "sk_test_1234567890abcdef"
+SLACK_TOKEN = "xoxb-1234567890-abcdefghij1234567890-xyz123456789"
 
 # Insecure Deserialization vulnerability
 @app.route("/deserialize", methods=["POST"])
