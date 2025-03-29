@@ -1,6 +1,18 @@
 # Security Scanning CI Pipeline Demo
 
+
+[![POC](https://img.shields.io/badge/POC-Success-success)](https://github.com/sanhphanvan96/seclabs-sast-sca-secrets-ci/actions)
+[![Learn](https://img.shields.io/badge/Learn-Success-success)](https://github.com/sanhphanvan96/seclabs-sast-sca-secrets-ci/actions)
+[![Fun](https://img.shields.io/badge/Fun-100%25-brightgreen)](https://github.com/sanhphanvan96/seclabs-sast-sca-secrets-ci/actions)
+[![Code](https://img.shields.io/badge/Code-Quality-blue)](https://github.com/sanhphanvan96/seclabs-sast-sca-secrets-ci/actions)
+
 A demonstration project showcasing various security scanning tools integrated into GitHub Actions workflows for Python applications.
+
+[![SAST](https://img.shields.io/badge/SAST-YES-red)](https://github.com/sanhphanvan96/seclabs-sast-sca-secrets-ci/actions/workflows/Scan-All-SAST.yml)
+[![Secrets](https://img.shields.io/badge/Secrets-YES-yellow)](https://github.com/sanhphanvan96/seclabs-sast-sca-secrets-ci/actions/workflows/Scan-All-Secrets.yml)
+[![SCA](https://img.shields.io/badge/SCA-YES-red)](https://github.com/sanhphanvan96/seclabs-sast-sca-secrets-ci/actions/workflows/Scan-All-SCA.yml)
+[![Container](https://img.shields.io/badge/Container-YES-orange)](https://github.com/sanhphanvan96/seclabs-sast-sca-secrets-ci/actions/workflows/Scan-All-Container.yml)
+[![Python 3.11](https://img.shields.io/badge/Python-3.11-blue.svg)](https://www.python.org/downloads/)
 
 ## 🛡️ Security Scans Included
 
