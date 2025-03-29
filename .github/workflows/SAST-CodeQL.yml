@@ -29,10 +29,20 @@ jobs:
       - name: Process Results
         id: results
         run: |
-          jq -r '.runs[].results | map(.severity) | group_by(.) | map({(.[0]): length}) | add // {}' results.sarif > severity_counts.json
-          echo "SEVERITIES=$(cat severity_counts.json | jq -c .)" >> $GITHUB_ENV
+          # Extract severity counts from SARIF
+          HIGH=$(jq '[.runs[].results[] | select(.level == "error")] | length' results.sarif)
+          MEDIUM=$(jq '[.runs[].results[] | select(.level == "warning")] | length' results.sarif)
+          LOW=$(jq '[.runs[].results[] | select(.level == "note")] | length' results.sarif)
+
+          echo "high=${HIGH:-0}" >> $GITHUB_OUTPUT
+          echo "medium=${MEDIUM:-0}" >> $GITHUB_OUTPUT
+          echo "low=${LOW:-0}" >> $GITHUB_OUTPUT
+
+          # Add results to job summary
           echo "## CodeQL Security Scan Results" >> $GITHUB_STEP_SUMMARY
-          cat severity_counts.json | jq -r 'to_entries | map("**\(.key | ascii_upcase):** \(.value)") | .[]' >> $GITHUB_STEP_SUMMARY
+          echo "- 🔥 **High:** ${HIGH:-0}" >> $GITHUB_STEP_SUMMARY
+          echo "- ⚠️ **Medium:** ${MEDIUM:-0}" >> $GITHUB_STEP_SUMMARY
+          echo "- 🛈 **Low:** ${LOW:-0}" >> $GITHUB_STEP_SUMMARY
 
       - name: Comment PR
         if: github.event_name == 'pull_request' && always()
