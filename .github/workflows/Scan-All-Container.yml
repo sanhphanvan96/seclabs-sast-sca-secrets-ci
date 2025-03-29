@@ -1,4 +1,4 @@
-name: Secrets Scan - All
+name: Container Scan - All
 on:
   workflow_dispatch:
   # pull_request:
