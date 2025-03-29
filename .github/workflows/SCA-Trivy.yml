@@ -7,13 +7,66 @@ on:
 jobs:
   trivy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      security-events: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Run Trivy
+
+      - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
-          scan-type: "fs"
-          exit-code: "0"
-          format: "table"
+          scan-type: 'fs'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
           ignore-unfixed: true
+
+      - name: Run Trivy for PR comments
+        uses: aquasecurity/trivy-action@master
+        if: github.event_name == 'pull_request'
+        with:
+          scan-type: 'fs'
+          format: 'table'
+          output: 'trivy-results.txt'
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+          category: 'Trivy-Security-Scan'
+
+      - name: Set output variables
+        if: github.event_name == 'pull_request'
+        id: vars
+        run: |
+          REPORT="$(cat trivy-results.txt)"
+          echo "report<<EOF" >> $GITHUB_OUTPUT
+          echo "$REPORT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Comment PR
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const output = `
+            #### Trivy Scan Results
+            \`\`\`
+            ${process.env.REPORT}
+            \`\`\`
+            `;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+        env:
+          REPORT: ${{ steps.vars.outputs.report }}
