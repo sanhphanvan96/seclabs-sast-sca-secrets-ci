@@ -20,17 +20,26 @@ jobs:
         with:
           project: "Python Flask API"
           path: "./"
-          format: "HTML"
+          format: "JSON"
           out: "reports"
 
-      - name: Read HTML Report
+      - name: Extract Summary from Report
         if: always()
-        id: report
+        id: summary
         run: |
-          REPORT="$(cat reports/dependency-check-report.html)"
-          echo "report<<EOF" >> $GITHUB_OUTPUT
-          echo "$REPORT" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          # Use jq to extract key info from JSON report
+          TOTAL_VULNS=$(jq '.dependencies[]?.vulnerabilities | length' reports/dependency-check-report.json | awk '{s+=$1} END {print s}')
+          CRITICAL=$(jq '.dependencies[].vulnerabilities[] | select(.severity == "CRITICAL") | .name' reports/dependency-check-report.json | wc -l)
+          HIGH=$(jq '.dependencies[].vulnerabilities[] | select(.severity == "HIGH") | .name' reports/dependency-check-report.json | wc -l)
+          MEDIUM=$(jq '.dependencies[].vulnerabilities[] | select(.severity == "MEDIUM") | .name' reports/dependency-check-report.json | wc -l)
+          LOW=$(jq '.dependencies[].vulnerabilities[] | select(.severity == "LOW") | .name' reports/dependency-check-report.json | wc -l)
+
+          # Set outputs for summary
+          echo "total_vulns=${TOTAL_VULNS:-0}" >> $GITHUB_OUTPUT
+          echo "critical=${CRITICAL:-0}" >> $GITHUB_OUTPUT
+          echo "high=${HIGH:-0}" >> $GITHUB_OUTPUT
+          echo "medium=${MEDIUM:-0}" >> $GITHUB_OUTPUT
+          echo "low=${LOW:-0}" >> $GITHUB_OUTPUT
 
       - name: Add to Job Summary
         if: always()
@@ -39,14 +48,16 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Full report available in workflow artifacts" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "<details><summary>Click to see detailed report</summary>" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          cat reports/dependency-check-report.html >> $GITHUB_STEP_SUMMARY
-          echo "</details>" >> $GITHUB_STEP_SUMMARY
+          echo "### Vulnerability Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Total Vulnerabilities**: ${{ steps.summary.outputs.total_vulns }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Critical**: ${{ steps.summary.outputs.critical }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **High**: ${{ steps.summary.outputs.high }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Medium**: ${{ steps.summary.outputs.medium }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Low**: ${{ steps.summary.outputs.low }}" >> $GITHUB_STEP_SUMMARY
 
       - name: Upload Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: dependency-check-report
-          path: reports/dependency-check-report.html
+          path: reports/dependency-check-report.json
