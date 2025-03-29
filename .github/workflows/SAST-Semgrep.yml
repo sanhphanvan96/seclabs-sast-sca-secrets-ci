@@ -1,4 +1,5 @@
 name: SAST - Semgrep Security Scan
+
 on:
   workflow_dispatch:
   pull_request:
@@ -17,14 +18,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run Semgrep Scan
+      - name: Run Semgrep CI Scan
         id: scan
         run: |
-          semgrep scan \
-            --config=auto \
-            --severity ERROR \
-            --output=semgrep-results.json \
-            --json | tee semgrep-results.txt
+          semgrep ci --json > semgrep-results.json 2>&1 | tee semgrep-results.txt
         continue-on-error: true
 
       - name: Display results
@@ -37,61 +34,56 @@ jobs:
         if: always()
         id: results
         run: |
-          # Get vulnerability counts by type
-          TOTAL=$(jq '.results | length' semgrep-results.json)
-          CRITICAL=$(jq '.results[] | select(.extra.severity == "ERROR") | .check_id' semgrep-results.json | wc -l)
-          HIGH=$(jq '.results[] | select(.extra.severity == "WARNING") | .check_id' semgrep-results.json | wc -l)
+          # Ensure jq handles empty results safely
+          TOTAL=$(jq '.results | length' semgrep-results.json 2>/dev/null || echo "0")
+          CRITICAL=$(jq '[.results[] | select(.extra.severity == "ERROR")] | length' semgrep-results.json 2>/dev/null || echo "0")
+          HIGH=$(jq '[.results[] | select(.extra.severity == "WARNING")] | length' semgrep-results.json 2>/dev/null || echo "0")
 
-          echo "total=${TOTAL:-0}" >> $GITHUB_OUTPUT
-          echo "critical=${CRITICAL:-0}" >> $GITHUB_OUTPUT
-          echo "high=${HIGH:-0}" >> $GITHUB_OUTPUT
+          echo "total=${TOTAL}" >> $GITHUB_OUTPUT
+          echo "critical=${CRITICAL}" >> $GITHUB_OUTPUT
+          echo "high=${HIGH}" >> $GITHUB_OUTPUT
 
           # Format findings for summary
-          echo "## Semgrep Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "## 🛡️ Semgrep Security Scan Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- 🔥 Critical: ${CRITICAL:-0}" >> $GITHUB_STEP_SUMMARY
-          echo "- ⚠️ High: ${HIGH:-0}" >> $GITHUB_STEP_SUMMARY
-          echo "- 📊 Total: ${TOTAL:-0}" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- 🔥 **Critical:** ${CRITICAL}" >> $GITHUB_STEP_SUMMARY
+          echo "- ⚠️ **High:** ${HIGH}" >> $GITHUB_STEP_SUMMARY
+          echo "- 📋 **Total Issues:** ${TOTAL}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          if [[ "${TOTAL:-0}" != "0" ]]; then
-            echo "<details><summary>Click to see findings</summary>" >> $GITHUB_STEP_SUMMARY
+          if [[ "$TOTAL" -gt 0 ]]; then
+            echo "<details><summary>Click to view details</summary>" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
 
-            # Process each finding
             jq -r '.results[] | "### " + .path + ":" + (.start.line|tostring) + "\n" +
-                  "**Severity:** " + .extra.severity + "\n" +
-                  "**Category:** " + .extra.metadata.category + "\n" +
-                  "**CWE:** " + (.extra.metadata.cwe[0]|split(":")[0]) + "\n" +
-                  "**Message:** " + .extra.message + "\n" +
+                  "**🔎 Severity:** " + .extra.severity + "\n" +
+                  "**📌 Rule:** " + .check_id + "\n" +
+                  "**🛑 Message:** " + .extra.message + "\n" +
                   "```\n" + .lines + "\n```\n"' semgrep-results.json >> $GITHUB_STEP_SUMMARY
 
             echo "</details>" >> $GITHUB_STEP_SUMMARY
           fi
 
-      - name: Comment PR
+      - name: Comment PR with Scan Results
         if: github.event_name == 'pull_request' && always()
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            const results = fs.readFileSync('semgrep-results.txt', 'utf8');
-            const total = ${{ steps.results.outputs.total }};
+            const total = Number("${{ steps.results.outputs.total }}");
+            let summary = "## 🛡️ Semgrep Security Scan Results\n\n";
 
-            const summary = `## Semgrep Security Scan Results
-
-            ${total === 0
-              ? '✅ No security issues found'
-              : `⚠️ ${total} security issues detected\n
-              <details>
-              <summary>Click to see findings</summary>
-
-              \`\`\`
-              ${results}
-              \`\`\`
-              </details>`}`;
+            if (total === 0) {
+              summary += "✅ No security issues found.\n";
+            } else {
+              const results = fs.readFileSync('semgrep-results.txt', 'utf8');
+              summary += `⚠️ **${total} security issues detected.**\n\n`;
+              summary += "<details><summary>Click to view details</summary>\n\n";
+              summary += "```\n" + results.substring(0, 6000) + "\n```\n";  # Limit comment size
+              summary += "</details>\n";
+            }
 
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
