@@ -10,7 +10,6 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-      security-events: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -19,27 +18,18 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-          severity: 'CRITICAL,HIGH'
-          ignore-unfixed: true
-
-      - name: Run Trivy for PR comments
-        uses: aquasecurity/trivy-action@master
-        if: github.event_name == 'pull_request'
-        with:
-          scan-type: 'fs'
           format: 'table'
           output: 'trivy-results.txt'
           severity: 'CRITICAL,HIGH'
           ignore-unfixed: true
 
-      - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+      - name: Add to Job Summary
         if: always()
-        with:
-          sarif_file: 'trivy-results.sarif'
-          category: 'Trivy-Security-Scan'
+        run: |
+          echo "## Trivy Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          cat trivy-results.txt >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
       - name: Set output variables
         if: github.event_name == 'pull_request'
