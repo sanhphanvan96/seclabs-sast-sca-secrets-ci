@@ -20,7 +20,7 @@ jobs:
         with:
           project: "Python Flask API"
           path: "./"
-          format: "JSON,HTML"
+          format: "ALL"
           out: "reports"
             # https://jeremylong.github.io/DependencyCheck/dependency-check-cli/arguments.html.
             # - '--nvdApiKey: Uses the NVD API key stored in GitHub Secrets for accessing the National Vulnerability Database.
