@@ -18,71 +18,56 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      # Cache CodeQL database to speed up subsequent runs
+      - name: Cache CodeQL Database
+        uses: actions/cache@v4
+        with:
+          path: ~/.codeql/databases
+          key: codeql-${{ github.sha }}
+          restore-keys: |
+            codeql-
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: python
+          queries: +security
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
-          output: ./output # Specify full path
+          output: ./output
 
-      - name: Install sarif-to-markdown
-        run: npm install -g @security-alert/sarif-to-markdown  # Install globally
-
-      - name: Process Results
-        id: results
+      - name: Convert SARIF to Markdown
         run: |
+          # find the SARIF file
+          SARIF_FILE=$(find ./output -name "*.sarif" | head -n 1)
+          # convert SARIF to Markdown
+          python .github/scripts/sarif_to_markdown.py "$SARIF_FILE" --output output.md --repo-url "https://github.com/${{ github.repository }}" --branch "${{ github.ref_name }}" --table
 
-          # Initialize summary file if not exists
-          echo "## CodeQL Security Scan Results" > $GITHUB_STEP_SUMMARY
-          echo "### Detailed Findings" >> $GITHUB_STEP_SUMMARY
+      # Append the Markdown output to the job summary
+      - name: Add to Job Summary
+        run: |
+          cat output.md >> $GITHUB_STEP_SUMMARY
 
-          # Convert SARIF to Markdown and append to summary
-          if [ -f ./output/python.sarif ]; then
-            npx sarif-to-markdown ./output/python.sarif >> $GITHUB_STEP_SUMMARY
-          else
-            echo "No results file found" >> $GITHUB_STEP_SUMMARY
-          fi
-
-      - name: Comment PR
-        if: github.event_name == 'pull_request' && always()
+      # Optional: Post the Markdown output as a PR comment
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            let summary = "## CodeQL Security Scan Results\n\n";
-
-            try {
-              const sarifData = JSON.parse(fs.readFileSync('./output/python.sarif', 'utf8'));
-              const counts = {
-                high: 0,
-                medium: 0,
-                low: 0
-              };
-
-              sarifData.runs[0]?.results?.forEach(result => {
-                switch(result.level) {
-                  case 'error': counts.high++; break;
-                  case 'warning': counts.medium++; break;
-                  case 'note': counts.low++; break;
-                }
-              });
-
-              summary += `**HIGH:** ${counts.high}\n` +
-                        `**MEDIUM:** ${counts.medium}\n` +
-                        `**LOW:** ${counts.low}\n`;
-            } catch (e) {
-              summary += "Failed to process scan results\n";
-            }
-
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
+            const markdown = fs.readFileSync('output.md', 'utf8');
+            github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: summary
+              issue_number: context.issue.number,
+              body: markdown
             });
 
       - name: Upload SARIF Report
@@ -90,4 +75,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: codeql-results
-          path: ./output/python.sarif
+          path: ./output/*.sarif
