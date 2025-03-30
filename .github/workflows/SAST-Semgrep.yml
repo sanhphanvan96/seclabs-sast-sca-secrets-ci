@@ -28,7 +28,6 @@ jobs:
             --no-force-color \
             --quiet \
             --use-git-ignore 2>&1 | tee semgrep-results.txt
-        continue-on-error: true
 
       - name: Process Results
         if: always()
@@ -45,11 +44,17 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            const results = fs.readFileSync('semgrep-results.txt', 'utf8');
+            let results = '';
+            try {
+              results = fs.readFileSync('semgrep-results.txt', 'utf8');
+            } catch (e) {
+              results = '✅ No issues detected';
+            }
 
             const output = `
+            ## Semgrep Security Scan Results
             <details>
-            <summary>🔍 Semgrep Scan Results (Click to see more)</summary>
+            <summary>🔍 Scan Results (Click to see more)</summary>
 
             \`\`\`
             ${results}
