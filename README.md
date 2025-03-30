@@ -1,4 +1,4 @@
-# Security Scanning CI Pipeline Demo
+# Security Scanning CI Pipeline Labs
 
 
 [![POC](https://img.shields.io/badge/POC-Success-success)](https://github.com/sanhphanvan96/seclabs-sast-sca-secrets-ci/actions)
@@ -6,7 +6,7 @@
 [![Fun](https://img.shields.io/badge/Fun-100%25-brightgreen)](https://github.com/sanhphanvan96/seclabs-sast-sca-secrets-ci/actions)
 [![Code](https://img.shields.io/badge/Code-Quality-blue)](https://github.com/sanhphanvan96/seclabs-sast-sca-secrets-ci/actions)
 
-A demonstration project showcasing various security scanning tools integrated into GitHub Actions workflows for Python applications.
+A demonstration project showcasing various security scanning tools integrated into GitHub Actions workflows.
 
 [![SAST](https://img.shields.io/badge/SAST-YES-red)](https://github.com/sanhphanvan96/seclabs-sast-sca-secrets-ci/actions/workflows/Scan-All-SAST.yml)
 [![Secrets](https://img.shields.io/badge/Secrets-YES-yellow)](https://github.com/sanhphanvan96/seclabs-sast-sca-secrets-ci/actions/workflows/Scan-All-Secrets.yml)
