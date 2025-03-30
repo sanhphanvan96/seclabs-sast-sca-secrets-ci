@@ -1,7 +1,10 @@
 name: SCA - Grype Vulnerability Scan
+
 on:
   workflow_dispatch:
   pull_request:
+    branches:
+      - main
   workflow_call:
 
 jobs:
