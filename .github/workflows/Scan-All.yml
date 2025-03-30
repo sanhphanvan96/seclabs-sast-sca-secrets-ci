@@ -2,7 +2,9 @@ name: Security Scan - All
 
 on:
   workflow_dispatch:
-  # pull_request:
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -10,76 +12,72 @@ permissions:
   security-events: write
 
 jobs:
+  # Secrets Scanning Group
   secrets-gitleaks:
     uses: ./.github/workflows/Secrets-Gitleaks.yml
     secrets: inherit
-    permissions:
-      contents: read
-      pull-requests: write
-      security-events: write
+
   secrets-trufflehog:
     uses: ./.github/workflows/Secrets-TruffleHog.yml
     secrets: inherit
-    permissions:
-      contents: read
-      pull-requests: write
-      security-events: write
+
   secrets-ggshield:
     uses: ./.github/workflows/Secrets-GGShield.yml
     secrets: inherit
-    permissions:
-      contents: read
-      pull-requests: write
-      security-events: write
 
+  # SCA Group (depends on all Secrets jobs)
   sca-depcheck:
+    needs:
+      - secrets-gitleaks
+      - secrets-trufflehog
+      - secrets-ggshield
     uses: ./.github/workflows/SCA-Dependency-Check.yml
     secrets: inherit
-    permissions:
-      contents: read
-      pull-requests: write
-      security-events: write
+
   sca-trivy:
+    needs:
+      - secrets-gitleaks
+      - secrets-trufflehog
+      - secrets-ggshield
     uses: ./.github/workflows/SCA-Trivy.yml
     secrets: inherit
-    permissions:
-      contents: read
-      pull-requests: write
-      security-events: write
+
   sca-grype:
+    needs:
+      - secrets-gitleaks
+      - secrets-trufflehog
+      - secrets-ggshield
     uses: ./.github/workflows/SCA-Grype.yml
     secrets: inherit
-    permissions:
-      contents: read
-      pull-requests: write
-      security-events: write
 
+  # SAST Group (depends on all SCA jobs)
   sast-semgrep:
+    needs:
+      - sca-depcheck
+      - sca-trivy
+      - sca-grype
     uses: ./.github/workflows/SAST-Semgrep.yml
     secrets: inherit
-    permissions:
-      contents: read
-      pull-requests: write
-      security-events: write
+
   sast-codeql:
+    needs:
+      - sca-depcheck
+      - sca-trivy
+      - sca-grype
     uses: ./.github/workflows/SAST-CodeQL.yml
     secrets: inherit
-    permissions:
-      contents: read
-      pull-requests: write
-      security-events: write
 
+  # Container Group (depends on all SAST jobs)
   container-dockle:
+    needs:
+      - sast-semgrep
+      - sast-codeql
     uses: ./.github/workflows/Container-Dockle.yml
     secrets: inherit
-    permissions:
-      contents: read
-      pull-requests: write
-      security-events: write
+
   container-trivy:
+    needs:
+      - sast-semgrep
+      - sast-codeql
     uses: ./.github/workflows/Container-Trivy.yml
     secrets: inherit
-    permissions:
-      contents: read
-      pull-requests: write
-      security-events: write
