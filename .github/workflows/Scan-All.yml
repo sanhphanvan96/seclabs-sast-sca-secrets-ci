@@ -2,9 +2,9 @@ name: Security Scan - All
 
 on:
   workflow_dispatch:
-  # pull_request:
-  #   branches:
-  #     - main
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -12,36 +12,82 @@ permissions:
   security-events: write
 
 jobs:
+  # Secrets Scanning Group
   secrets-gitleaks:
     uses: ./.github/workflows/Secrets-Gitleaks.yml
+    if: always()
     secrets: inherit
+
   secrets-trufflehog:
     uses: ./.github/workflows/Secrets-TruffleHog.yml
+    if: always()
     secrets: inherit
+
   secrets-ggshield:
     uses: ./.github/workflows/Secrets-GGShield.yml
+    if: always()
     secrets: inherit
 
+  # SCA Group (depends on all Secrets jobs)
   sca-depcheck:
+    needs:
+      - secrets-gitleaks
+      - secrets-trufflehog
+      - secrets-ggshield
     uses: ./.github/workflows/SCA-Dependency-Check.yml
+    if: always()
     secrets: inherit
+
   sca-trivy:
+    needs:
+      - secrets-gitleaks
+      - secrets-trufflehog
+      - secrets-ggshield
     uses: ./.github/workflows/SCA-Trivy.yml
+    if: always()
     secrets: inherit
+
   sca-grype:
+    needs:
+      - secrets-gitleaks
+      - secrets-trufflehog
+      - secrets-ggshield
     uses: ./.github/workflows/SCA-Grype.yml
+    if: always()
     secrets: inherit
 
+  # SAST Group (depends on all SCA jobs)
   sast-semgrep:
+    needs:
+      - sca-depcheck
+      - sca-trivy
+      - sca-grype
     uses: ./.github/workflows/SAST-Semgrep.yml
-    secrets: inherit
-  sast-codeql:
-    uses: ./.github/workflows/SAST-CodeQL.yml
+    if: always()
     secrets: inherit
 
-  container-dockle:
-    uses: ./.github/workflows/Container-Dockle.yml
+  sast-codeql:
+    needs:
+      - sca-depcheck
+      - sca-trivy
+      - sca-grype
+    uses: ./.github/workflows/SAST-CodeQL.yml
+    if: always()
     secrets: inherit
+
+  # Container Group (depends on all SAST jobs)
+  container-dockle:
+    needs:
+      - sast-semgrep
+      - sast-codeql
+    uses: ./.github/workflows/Container-Dockle.yml
+    if: always()
+    secrets: inherit
+
   container-trivy:
+    needs:
+      - sast-semgrep
+      - sast-codeql
     uses: ./.github/workflows/Container-Trivy.yml
+    if: always()
     secrets: inherit
