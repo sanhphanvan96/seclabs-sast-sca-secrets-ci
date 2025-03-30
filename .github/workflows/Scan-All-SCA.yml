@@ -15,23 +15,9 @@ jobs:
   sca-depcheck:
     uses: ./.github/workflows/SCA-Dependency-Check.yml
     secrets: inherit
-    permissions:
-      contents: read
-      pull-requests: write
-      security-events: write
-
   sca-trivy:
     uses: ./.github/workflows/SCA-Trivy.yml
     secrets: inherit
-    permissions:
-      contents: read
-      pull-requests: write
-      security-events: write
-
   sca-grype:
     uses: ./.github/workflows/SCA-Grype.yml
     secrets: inherit
-    permissions:
-      contents: read
-      pull-requests: write
-      security-events: write

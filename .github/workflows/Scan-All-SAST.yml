@@ -15,14 +15,6 @@ jobs:
   sast-semgrep:
     uses: ./.github/workflows/SAST-Semgrep.yml
     secrets: inherit
-    permissions:
-      contents: read
-      pull-requests: write
-      security-events: write
   sast-codeql:
     uses: ./.github/workflows/SAST-CodeQL.yml
     secrets: inherit
-    permissions:
-      contents: read
-      pull-requests: write
-      security-events: write

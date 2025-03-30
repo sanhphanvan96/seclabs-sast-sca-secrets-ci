@@ -2,9 +2,9 @@ name: Security Scan - All
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches:
-      - main
+  # pull_request:
+  #   branches:
+  #     - main
 
 permissions:
   contents: read
@@ -12,64 +12,36 @@ permissions:
   security-events: write
 
 jobs:
-  # Secrets Scanning Group
+  secrets-gitleaks:
+    uses: ./.github/workflows/Secrets-Gitleaks.yml
+    secrets: inherit
+  secrets-trufflehog:
+    uses: ./.github/workflows/Secrets-TruffleHog.yml
+    secrets: inherit
   secrets-ggshield:
     uses: ./.github/workflows/Secrets-GGShield.yml
     secrets: inherit
 
-  secrets-gitleaks:
-    needs: secrets-ggshield
-    if: always()
-    uses: ./.github/workflows/Secrets-Gitleaks.yml
-    secrets: inherit
-
-  secrets-trufflehog:
-    needs: secrets-gitleaks
-    if: always()
-    uses: ./.github/workflows/Secrets-TruffleHog.yml
-    secrets: inherit
-
-  # SCA Group (depends on Secrets-TruffleHog)
   sca-depcheck:
-    needs: secrets-trufflehog
-    if: always()
     uses: ./.github/workflows/SCA-Dependency-Check.yml
     secrets: inherit
-
   sca-trivy:
-    needs: sca-depcheck
-    if: always()
     uses: ./.github/workflows/SCA-Trivy.yml
     secrets: inherit
-
   sca-grype:
-    needs: sca-trivy
-    if: always()
     uses: ./.github/workflows/SCA-Grype.yml
     secrets: inherit
 
-  # SAST Group (depends on SCA-Grype)
   sast-semgrep:
-    needs: sca-grype
-    if: always()
     uses: ./.github/workflows/SAST-Semgrep.yml
     secrets: inherit
-
   sast-codeql:
-    needs: sast-semgrep
-    if: always()
     uses: ./.github/workflows/SAST-CodeQL.yml
     secrets: inherit
 
-  # Container Group (depends on SAST-CodeQL)
   container-dockle:
-    needs: sast-codeql
-    if: always()
     uses: ./.github/workflows/Container-Dockle.yml
     secrets: inherit
-
   container-trivy:
-    needs: container-dockle
-    if: always()
     uses: ./.github/workflows/Container-Trivy.yml
     secrets: inherit
